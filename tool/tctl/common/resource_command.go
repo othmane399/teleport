@@ -130,6 +130,7 @@ func (rc *ResourceCommand) Initialize(app *kingpin.Application, config *servicec
 		types.KindLock:                     rc.createLock,
 		types.KindNetworkRestrictions:      rc.createNetworkRestrictions,
 		types.KindApp:                      rc.createApp,
+		types.KindAppServer:                rc.createAppServer,
 		types.KindDatabase:                 rc.createDatabase,
 		types.KindKubernetesCluster:        rc.createKubeCluster,
 		types.KindToken:                    rc.createToken,
@@ -815,7 +816,19 @@ func (rc *ResourceCommand) createApp(ctx context.Context, client *auth.Client, r
 	return nil
 }
 
-func (rc *ResourceCommand) createKubeCluster(ctx context.Context, client *auth.Client, raw services.UnknownResource) error {
+func (rc *ResourceCommand) createAppServer(ctx context.Context, client auth.ClientI, raw services.UnknownResource) error {
+	appServer, err := services.UnmarshalAppServer(raw.Raw)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if _, err := client.UpsertApplicationServer(ctx, appServer); err != nil {
+		return trace.Wrap(err)
+	}
+	fmt.Printf("application server %q has been upserted\n", appServer.GetName())
+	return nil
+}
+
+func (rc *ResourceCommand) createKubeCluster(ctx context.Context, client auth.ClientI, raw services.UnknownResource) error {
 	cluster, err := services.UnmarshalKubeCluster(raw.Raw)
 	if err != nil {
 		return trace.Wrap(err)
