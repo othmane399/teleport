@@ -17,6 +17,7 @@
  */
 
 import React from 'react';
+import { userEvent, UserEvent } from '@testing-library/user-event';
 import { render, fireEvent, screen, waitFor } from 'design/utils/testing';
 
 import auth from 'teleport/services/auth/auth';
@@ -24,11 +25,15 @@ import history from 'teleport/services/history';
 import cfg from 'teleport/config';
 
 import { Login } from './Login';
+import { ExecutionEnvelopeType } from 'teleport/Assist/types';
+
+let user: UserEvent;
 
 beforeEach(() => {
   jest.restoreAllMocks();
   jest.spyOn(history, 'push').mockImplementation();
   jest.spyOn(history, 'getRedirectParam').mockImplementation(() => '/');
+  user = userEvent.setup();
 });
 
 test('basic rendering', () => {
@@ -78,6 +83,19 @@ test('login with SSO', () => {
     'http://localhost/github/login/web?redirect_url=http:%2F%2Flocalhost%2Fwebconnector_id=github',
     true
   );
+});
+
+test('passwordless login', async () => {
+  jest.spyOn(cfg, 'getPrimaryAuthType').mockReturnValue('passwordless');
+  jest.spyOn(auth, 'loginWithWebauthn').mockResolvedValue(undefined);
+
+  render(<Login />);
+
+  await user.click(
+    screen.getByRole('button', { name: 'Sign in with a Passkey' })
+  );
+  expect(auth.loginWithWebauthn).toHaveBeenCalledWith(undefined); // No credentials
+  expect(history.push).toHaveBeenCalledWith('http://localhost/web', true);
 });
 
 describe('test MOTD', () => {

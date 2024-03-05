@@ -26,6 +26,7 @@ import {
   ButtonPrimary,
   Box,
   ButtonText,
+  ButtonSecondary,
 } from 'design';
 import { Key, ArrowForward } from 'design/Icon';
 import * as Alerts from 'design/Alert';
@@ -49,6 +50,7 @@ import { StepSlider, StepComponentProps } from 'design/StepSlider';
 import { UserCredentials } from 'teleport/services/auth';
 
 import SSOButtonList from './SsoButtons';
+import { PasskeyIcons } from '../PasskeyIcons';
 
 export default function LoginForm(props: Props) {
   const {
@@ -159,33 +161,32 @@ const Passwordless = ({
           Safari.
         </Alerts.Info>
       )}
-      <StyledPaswordlessBtn
-        setRef={ref}
-        mt={3}
-        py={2}
-        px={3}
-        width="100%"
-        onClick={() => onLoginWithWebauthn()}
-        disabled={attempt.isProcessing}
+      <Flex
+        flexDirection="column"
+        mb={4}
+        border={1}
+        borderColor="interactive.tonal.neutral.2"
+        borderRadius={3}
+        p={3}
+        gap={3}
       >
-        <Flex alignItems="center" justifyContent="space-between">
-          <Flex alignItems="center">
-            <Key mr={3} size="medium" />
-            <Box>
-              <Text typography="h6">Passwordless</Text>
-              <Text
-                fontSize={1}
-                color={
-                  attempt.isProcessing ? 'text.disabled' : 'text.slightlyMuted'
-                }
-              >
-                Follow the prompt from your browser
-              </Text>
-            </Box>
-          </Flex>
-          <ArrowForward size="medium" />
-        </Flex>
-      </StyledPaswordlessBtn>
+        <div>
+          <PasskeyIcons />
+        </div>
+        <div>
+          <Text typography="h6">Passwordless</Text>
+          <Text typography="body1">
+            Your browser will prompt you for a device key.
+          </Text>
+        </div>
+        <ButtonPrimary
+          setRef={ref}
+          disabled={attempt.isProcessing}
+          onClick={() => onLoginWithWebauthn()}
+        >
+          Sign in with a Passkey
+        </ButtonPrimary>
+      </Flex>
     </Box>
   );
 };
@@ -356,55 +357,70 @@ const Primary = ({
 }: Props & StepComponentProps) => {
   const ssoEnabled = otherProps.authProviders?.length > 0;
   let otherOptionsAvailable = true;
-  let $primary;
 
-  switch (otherProps.primaryAuthType) {
-    case 'passwordless':
-      $primary = (
-        <Passwordless
-          {...otherProps}
-          autoFocus={true}
-          hasTransitionEnded={hasTransitionEnded}
-        />
-      );
-      break;
-    case 'sso':
-      $primary = (
-        <SsoList
-          {...otherProps}
-          autoFocus={true}
-          hasTransitionEnded={hasTransitionEnded}
-        />
-      );
-      break;
-    case 'local':
-      otherOptionsAvailable = otherProps.isPasswordlessEnabled || ssoEnabled;
-      $primary = (
-        <LocalForm
-          {...otherProps}
-          hasTransitionEnded={hasTransitionEnded}
-          autoFocus={true}
-        />
-      );
-      break;
+  const allAuthTypes: PrimaryAuthType[] = ['passwordless', 'sso', 'local'];
+  const otherAuthTypes = allAuthTypes.filter(t => {
+    if (t === otherProps.primaryAuthType) return false;
+    if (!otherProps.isPasswordlessEnabled && t === 'passwordless') return false;
+    if (!ssoEnabled && t === 'sso') return false;
+    return true;
+  });
+
+  function AuthMethodButton({
+    authType,
+    primary,
+    autoFocus,
+    ...otherProps
+  }: {
+    authType: PrimaryAuthType;
+    primary: boolean;
+    autoFocus: boolean;
+  } & StepComponentProps) {
+    switch (authType) {
+      case 'passwordless':
+        return (
+          <Passwordless
+            {...otherProps}
+            autoFocus={autoFocus}
+            hasTransitionEnded={hasTransitionEnded}
+          />
+        );
+      case 'sso':
+        return (
+          <SsoList
+            {...otherProps}
+            autoFocus={autoFocus}
+            hasTransitionEnded={hasTransitionEnded}
+          />
+        );
+      case 'local':
+        return primary ? (
+          <LocalForm
+            {...otherProps}
+            hasTransitionEnded={hasTransitionEnded}
+            autoFocus={true}
+          />
+        ) : (
+          <Box px={6} py={2}>
+            <ButtonSecondary size="large" block onClick={next}>
+              Sign in with Username and Password
+            </ButtonSecondary>
+          </Box>
+        );
+    }
   }
 
   return (
     <Box ref={refCallback}>
-      {$primary}
-      {otherOptionsAvailable && (
-        <Box pt={3} mt={-1} textAlign="center">
-          <ButtonText
-            disabled={otherProps.attempt.isProcessing}
-            onClick={() => {
-              otherProps.clearAttempt();
-              next();
-            }}
-          >
-            Other sign-in options
-          </ButtonText>
-        </Box>
-      )}
+      <AuthMethodButton
+        {...otherProps}
+        authType={otherProps.primaryAuthType}
+        primary
+      />
+      {otherAuthTypes.length > 0 && <Divider />}
+      {otherAuthTypes.map((authType, i) => (
+        <AuthMethodButton {...otherProps} authType={authType} />
+      ))}
     </Box>
   );
 };
@@ -419,54 +435,9 @@ const Secondary = ({
   refCallback,
   ...otherProps
 }: Props & StepComponentProps) => {
-  const ssoEnabled = otherProps.authProviders?.length > 0;
-  const { primaryAuthType, isPasswordlessEnabled } = otherProps;
-
-  let $secondary;
-  switch (primaryAuthType) {
-    case 'passwordless':
-      if (ssoEnabled) {
-        $secondary = (
-          <>
-            <SsoList {...otherProps} autoFocus={true} />
-            <Divider />
-            <LocalForm {...otherProps} />
-          </>
-        );
-      } else {
-        $secondary = <LocalForm {...otherProps} autoFocus={true} />;
-      }
-      break;
-    case 'sso':
-      if (isPasswordlessEnabled) {
-        $secondary = (
-          <>
-            <Passwordless {...otherProps} autoFocus={true} />
-            <Divider />
-            <LocalForm {...otherProps} />
-          </>
-        );
-      } else {
-        $secondary = <LocalForm {...otherProps} autoFocus={true} />;
-      }
-      break;
-    case 'local':
-      if (isPasswordlessEnabled) {
-        $secondary = (
-          <>
-            <Passwordless {...otherProps} autoFocus={true} />
-            {otherProps.isPasswordlessEnabled && ssoEnabled && <Divider />}
-            {ssoEnabled && <SsoList {...otherProps} />}
-          </>
-        );
-      } else {
-        $secondary = <SsoList {...otherProps} autoFocus={true} />;
-      }
-      break;
-  }
   return (
     <Box ref={refCallback}>
-      {$secondary}
+      <LocalForm {...otherProps} autoFocus={true} />
       <Box pt={3} textAlign="center">
         <ButtonText
           disabled={otherProps.attempt.isProcessing}
@@ -528,6 +499,7 @@ const StyledOr = styled.div`
   justify-content: center;
   position: absolute;
   z-index: 1;
+  text-transform: uppercase;
 `;
 
 const loginViews = { default: [Primary, Secondary] };
