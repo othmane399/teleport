@@ -2851,7 +2851,7 @@ func TestValidateListenerSocket(t *testing.T) {
 	t.Parallel()
 
 	newSocketFiles := func(t *testing.T) (*uds.Conn, *os.File) {
-		left, right, err := uds.NewSocketpair(uds.SocketTypeDatagram)
+		left, right, err := uds.NewSocketpair(uds.SocketTypeStream)
 		require.NoError(t, err)
 		listenerFD, err := right.File()
 		require.NoError(t, err)
@@ -2897,10 +2897,10 @@ func TestValidateListenerSocket(t *testing.T) {
 			assert: require.Error,
 		},
 		{
-			name: "socket type not DGRAM",
+			name: "socket type not STREAM",
 			user: u.Username,
 			mutateFiles: func(t *testing.T, conn *uds.Conn, file *os.File) (*uds.Conn, *os.File) {
-				left, right, err := uds.NewSocketpair(uds.SocketTypeStream)
+				left, right, err := uds.NewSocketpair(uds.SocketTypeDatagram)
 				require.NoError(t, err)
 				listenerFD, err := right.File()
 				require.NoError(t, err)

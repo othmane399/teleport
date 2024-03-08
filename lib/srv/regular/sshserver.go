@@ -1268,8 +1268,8 @@ func validateListenerSocket(scx *srv.ServerContext, controlConn *net.UnixConn, l
 	// Verify the socket type
 	if sockType, err := unix.GetsockoptInt(int(listenerFD.Fd()), unix.SOL_SOCKET, unix.SO_TYPE); err != nil {
 		return trace.Wrap(err)
-	} else if sockType != unix.SOCK_DGRAM {
-		return trace.AccessDenied("socket is not of the expected type (DGRAM)")
+	} else if sockType != unix.SOCK_STREAM && sockType != unix.SOCK_SEQPACKET {
+		return trace.AccessDenied("socket is not of the expected type (STREAM or SEQPACKET)")
 	}
 
 	// Verify that reuse is not enabled on the socket
