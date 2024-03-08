@@ -1844,12 +1844,6 @@ func TestSSHAccessRequest(t *testing.T) {
 						Roles:         []string{"node-access"},
 						SearchAsRoles: []string{"node-access"},
 					},
-					Rules: []types.Rule{
-						{
-							Resources: []string{types.KindRole},
-							Verbs:     []string{types.VerbRead},
-						},
-					},
 				},
 			})
 			require.NoError(t, err)
