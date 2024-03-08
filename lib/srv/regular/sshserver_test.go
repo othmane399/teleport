@@ -32,7 +32,6 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -2853,12 +2852,25 @@ func TestValidateListenerSocket(t *testing.T) {
 	newSocketFiles := func(t *testing.T) (*uds.Conn, *os.File) {
 		left, right, err := uds.NewSocketpair(uds.SocketTypeStream)
 		require.NoError(t, err)
-		listenerFD, err := right.File()
+
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
 		require.NoError(t, err)
-		require.NoError(t, right.Close())
+		tcpListener := listener.(*net.TCPListener)
+		listenerFD, err := tcpListener.File()
+		require.NoError(t, err)
+
+		conn, err := tcpListener.SyscallConn()
+		require.NoError(t, err)
+		err2 := conn.Control(func(descriptor uintptr) {
+			// Disable address reuse to prevent socket replacement.
+			err = syscall.SetsockoptInt(int(descriptor), syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 0)
+		})
+		require.NoError(t, err2)
+		require.NoError(t, err)
+
 		t.Cleanup(func() {
 			require.NoError(t, left.Close())
-			require.NoError(t, listenerFD.Close())
+			require.NoError(t, right.Close())
 		})
 		return left, listenerFD
 	}
@@ -2884,19 +2896,6 @@ func TestValidateListenerSocket(t *testing.T) {
 			assert: require.Error,
 		},
 		{
-			name: "not a socket",
-			user: u.Username,
-			mutateFiles: func(t *testing.T, conn *uds.Conn, file *os.File) (*uds.Conn, *os.File) {
-				regularFile, err := os.Create(filepath.Join(t.TempDir(), "test.txt"))
-				require.NoError(t, err)
-				t.Cleanup(func() {
-					require.NoError(t, regularFile.Close())
-				})
-				return conn, regularFile
-			},
-			assert: require.Error,
-		},
-		{
 			name: "socket type not STREAM",
 			user: u.Username,
 			mutateFiles: func(t *testing.T, conn *uds.Conn, file *os.File) (*uds.Conn, *os.File) {
@@ -2914,22 +2913,28 @@ func TestValidateListenerSocket(t *testing.T) {
 			assert: require.Error,
 		},
 		{
-			name: "socket not set to close on exec",
-			user: u.Username,
-			mutateConn: func(t *testing.T, file *os.File) {
-				fd := file.Fd()
-				_, err := unix.FcntlInt(fd, unix.F_SETFD, 0)
-				require.NoError(t, err)
-			},
-			assert: require.Error,
-		},
-		{
 			name: "SO_REUSEADDR enabled",
 			user: u.Username,
 			mutateConn: func(t *testing.T, file *os.File) {
 				fd := file.Fd()
 				err := unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEADDR, 1)
 				require.NoError(t, err)
+			},
+			assert: require.Error,
+		},
+		{
+			name: "listener socket is not listening",
+			user: u.Username,
+			mutateFiles: func(t *testing.T, conn *uds.Conn, file *os.File) (*uds.Conn, *os.File) {
+				left, right, err := uds.NewSocketpair(uds.SocketTypeStream)
+				require.NoError(t, err)
+				listenerFD, err := right.File()
+				require.NoError(t, err)
+				t.Cleanup(func() {
+					require.NoError(t, left.Close())
+					require.NoError(t, listenerFD.Close())
+				})
+				return left, listenerFD
 			},
 			assert: require.Error,
 		},

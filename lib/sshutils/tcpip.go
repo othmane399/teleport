@@ -20,6 +20,7 @@ package sshutils
 
 import (
 	"context"
+	"io"
 	"net"
 
 	"github.com/gravitational/trace"
@@ -115,6 +116,7 @@ func StartRemoteListener(ctx context.Context, sshConn channelOpener, srcAddr, ds
 				continue
 			}
 			go ssh.DiscardRequests(rch)
+			go io.Copy(io.Discard, ch.Stderr())
 			go utils.ProxyConn(ctx, conn, ch)
 		}
 	}()

@@ -1220,10 +1220,12 @@ func (s *Server) listenTCPIP(scx *srv.ServerContext, addr string) (net.Listener,
 
 func controlSyscallConn(conn syscall.RawConn, f func(fd uintptr) error) error {
 	var err error
-	err2 := conn.Control(func(fd uintptr) {
+	if cErr := conn.Control(func(fd uintptr) {
 		err = f(fd)
-	})
-	return trace.NewAggregate(err2, err)
+	}); cErr != nil {
+		return trace.Wrap(cErr)
+	}
+	return trace.Wrap(err)
 }
 
 // validateListenerSocket checks that the socket and listener file descriptor
@@ -1258,44 +1260,41 @@ func validateListenerSocket(scx *srv.ServerContext, controlConn *net.UnixConn, l
 		return trace.AccessDenied("unexpected user GID for the socket: %v", cred.Gid)
 	}
 
-	// Verify that the listener is a socket.
-	if fileInfo, err := listenerFD.Stat(); err != nil {
+	listenerSyscallConn, err := listenerFD.SyscallConn()
+	if err != nil {
 		return trace.Wrap(err)
-	} else if fileInfo.Mode()&os.ModeSocket == 0 {
-		return trace.AccessDenied("file descriptor is not a socket")
 	}
+	if err := controlSyscallConn(listenerSyscallConn, func(fd uintptr) error {
+		// Verify the socket type
+		if sockType, err := unix.GetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_TYPE); err != nil {
+			return trace.Wrap(err)
+		} else if sockType != unix.SOCK_STREAM {
+			return trace.AccessDenied("socket is not of the expected type (STREAM)")
+		}
 
-	// Verify the socket type
-	if sockType, err := unix.GetsockoptInt(int(listenerFD.Fd()), unix.SOL_SOCKET, unix.SO_TYPE); err != nil {
-		return trace.Wrap(err)
-	} else if sockType != unix.SOCK_STREAM && sockType != unix.SOCK_SEQPACKET {
-		return trace.AccessDenied("socket is not of the expected type (STREAM or SEQPACKET)")
-	}
+		// Verify that reuse is not enabled on the socket
+		if reuseAddr, err := unix.GetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEADDR); err != nil {
+			return trace.Wrap(err)
+		} else if reuseAddr != 0 {
+			return trace.AccessDenied("SO_REUSEADDR is enabled on the socket")
+		}
+		if reusePort, err := unix.GetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT); err != nil {
+			// Some systems may not support SO_REUSEPORT, so we ignore the error here
+		} else if reusePort != 0 {
+			return trace.AccessDenied("SO_REUSEPORT is enabled on the socket")
+		}
 
-	// Verify that reuse is not enabled on the socket
-	if reuseAddr, err := unix.GetsockoptInt(int(listenerFD.Fd()), unix.SOL_SOCKET, unix.SO_REUSEADDR); err != nil {
-		return trace.Wrap(err)
-	} else if reuseAddr != 0 {
-		return trace.AccessDenied("SO_REUSEADDR is enabled on the socket")
-	}
-	if reusePort, err := unix.GetsockoptInt(int(listenerFD.Fd()), unix.SOL_SOCKET, unix.SO_REUSEPORT); err != nil {
-		// Some systems may not support SO_REUSEPORT, so we ignore the error here
-	} else if reusePort != 0 {
-		return trace.AccessDenied("SO_REUSEPORT is enabled on the socket")
-	}
+		// Verify that the listener is already listening.
+		if acceptConn, err := unix.GetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_ACCEPTCONN); err != nil {
+			return trace.Wrap(err)
+		} else if acceptConn == 0 {
+			return trace.AccessDenied("SO_ACCEPTCONN is not set, socket is not listening")
+		}
 
-	// Verify file descriptor flags
-	if fdFlags, err := unix.FcntlInt(listenerFD.Fd(), unix.F_GETFL, 0); err != nil {
+		return nil
+	}); err != nil {
 		return trace.Wrap(err)
-	} else if fdFlags&unix.O_NONBLOCK != 0 {
-		return trace.AccessDenied("socket is set to non-blocking mode")
 	}
-	if fdFlags, _, err := unix.Syscall(unix.SYS_FCNTL, listenerFD.Fd(), unix.F_GETFD, 0); err != 0 {
-		return trace.Wrap(err)
-	} else if fdFlags&unix.FD_CLOEXEC == 0 {
-		return trace.AccessDenied("socket is not set to close on exec")
-	}
-
 	return nil
 }
 
