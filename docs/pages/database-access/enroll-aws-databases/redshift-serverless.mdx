@@ -204,40 +204,20 @@ Install Teleport on the host where you will run the Teleport Database Service:
 
 (!docs/pages/includes/install-linux.mdx!)
 
-On the same host, create a file at `/etc/teleport.yaml` with the following
-content.
+On the same host, run the following command:
 
-```yaml
-version: v3
-teleport:
-  data_dir: /var/lib/teleport
-  proxy_server: teleport.example.com:3080
-  auth_token: "/tmp/token"
-db_service:
-  enabled: "yes"
-  # This section contains definitions of all databases proxied by this
-  # service, can contain multiple items.
-  databases:
-  - name: "redshift-serverless"
-    uri: REDSHIFT_SERVERLESS_URI
-    protocol: postgres
-    aws:
-      redshift_serverless:
-        workgroup_name: WORKGROUP_NAME
-        endpoint_name: ENDPOINT_NAME
-auth_service:
-  enabled: "no"
-ssh_service:
-  enabled: "no"
-proxy_service:
-  enabled: "no"
+```code
+$ sudo teleport db configure create \
+   -o file \
+   --proxy=<Var name="example.teleport.sh:443" />  \
+   --protocol=postgres \
+   --uri=<Var name="REDSHIFT_SERVERLESS_URI" /> \
+   --token=/tmp/token
 ```
 
 Replace `example.teleport.sh:443` with the host and port of your Teleport Proxy
-Service. Replace `WORKGROUP_NAME` and `ENDPOINT_NAME` with the names of your
-Redshift Serverless workgroup and endpoint, and replace
-`REDSHIFT_SERVERLESS_URI` with the domain name and port of your Redshift
-Serverless database.
+Service. Replace `REDSHIFT_SERVERLESS_URI` with the domain name and port of your
+Redshift Serverless database.
 
 ### Bootstrap access to Redshift Serverless
 
@@ -305,7 +285,7 @@ $ tsh login --proxy=mytenant.teleport.sh --user=alice
 $ tsh db ls
 Name        Description                    Labels
 ----------- ------------------------------ --------
-my-redshift Redshift cluster in us-east-1  ...
+my-redshift                                ...
 ```
 
 To connect to the Redshift Serverless instance:
