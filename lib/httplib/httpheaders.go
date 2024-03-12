@@ -147,7 +147,7 @@ func SetCacheHeaders(h http.Header, maxAge time.Duration) {
 // SetEntityTagCacheHeaders tells proxies and browsers to cache the content
 // and sets an ETag based on teleport version which can be used to check for modifications
 func SetEntityTagCacheHeaders(h http.Header, version string) {
-	h.Set("Cache-Control", "max-age=300")
+	h.Set("Cache-Control", "no-cache")
 	h.Set("ETag", version)
 }
 
