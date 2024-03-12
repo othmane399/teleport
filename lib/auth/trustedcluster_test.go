@@ -443,7 +443,8 @@ func newTestAuthServer(ctx context.Context, t *testing.T, name ...string) *Serve
 	t.Cleanup(func() { a.Close() })
 	require.NoError(t, a.SetClusterAuditConfig(ctx, types.DefaultClusterAuditConfig()))
 	require.NoError(t, a.SetClusterNetworkingConfig(ctx, types.DefaultClusterNetworkingConfig()))
-	require.NoError(t, a.SetSessionRecordingConfig(ctx, types.DefaultSessionRecordingConfig()))
+	_, err = a.UpsertSessionRecordingConfig(ctx, types.DefaultSessionRecordingConfig())
+	require.NoError(t, err)
 	require.NoError(t, a.SetAuthPreference(ctx, types.DefaultAuthPreference()))
 	return a
 }

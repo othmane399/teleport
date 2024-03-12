@@ -171,7 +171,7 @@ func newTestPack(
 	if err := p.a.SetClusterNetworkingConfig(ctx, types.DefaultClusterNetworkingConfig()); err != nil {
 		return p, trace.Wrap(err)
 	}
-	if err := p.a.SetSessionRecordingConfig(ctx, types.DefaultSessionRecordingConfig()); err != nil {
+	if _, err := p.a.UpsertSessionRecordingConfig(ctx, types.DefaultSessionRecordingConfig()); err != nil {
 		return p, trace.Wrap(err)
 	}
 

@@ -4522,7 +4522,8 @@ func (a *ServerWithRoles) SetSessionRecordingConfig(ctx context.Context, newRecC
 		return trace.Wrap(err)
 	}
 
-	return a.authServer.SetSessionRecordingConfig(ctx, newRecConfig)
+	_, err = a.authServer.UpsertSessionRecordingConfig(ctx, newRecConfig)
+	return trace.Wrap(err)
 }
 
 // ResetSessionRecordingConfig resets session recording configuration to defaults.
@@ -4545,7 +4546,8 @@ func (a *ServerWithRoles) ResetSessionRecordingConfig(ctx context.Context) error
 		return trace.Wrap(err)
 	}
 
-	return a.authServer.SetSessionRecordingConfig(ctx, types.DefaultSessionRecordingConfig())
+	_, err = a.authServer.UpsertSessionRecordingConfig(ctx, types.DefaultSessionRecordingConfig())
+	return trace.Wrap(err)
 }
 
 // GetServerInfos returns a stream of ServerInfos.
