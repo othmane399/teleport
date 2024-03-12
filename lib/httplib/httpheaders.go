@@ -144,6 +144,13 @@ func SetCacheHeaders(h http.Header, maxAge time.Duration) {
 	h.Set("Cache-Control", fmt.Sprintf("max-age=%.f, immutable", maxAge.Seconds()))
 }
 
+// SetEntityTagCacheHeaders tells proxies and browsers to cache the content
+// and sets an ETag based on teleport version which can be used to check for modifications
+func SetEntityTagCacheHeaders(h http.Header, version string) {
+	h.Set("Cache-Control", "max-age=300")
+	h.Set("ETag", version)
+}
+
 // SetDefaultSecurityHeaders adds headers that should generally be considered safe defaults.  It is expected that all
 // responses should be able to add these headers without negative impact.
 func SetDefaultSecurityHeaders(h http.Header) {
