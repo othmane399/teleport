@@ -12,8 +12,13 @@ description: How to configure Teleport database access with self-hosted PostgreS
 <TabItem scope={["cloud"]} label="Teleport Enterprise Cloud">
 ![Teleport Database Access PostgreSQL Cloud](../../../img/database-access/guides/postgresqlselfhosted_cloud.png)
 </TabItem>
-
 </Tabs>
+
+The Teleport Database Service proxies user connections by connecting to the
+database using mutual TLS. You can configure your database to trust either the
+Teleport certificate authority for databases or your own certificate authority.
+If you choose the latter, Teleport still manages user authentication and
+role-based access controls.
 
 ## Prerequisites
 
@@ -24,6 +29,9 @@ description: How to configure Teleport database access with self-hosted PostgreS
 - A host, e.g., an Amazon EC2 instance, where you will run the Teleport Database
   Service.
 - (!docs/pages/includes/tctl.mdx!)
+- A certificate authority if you plan to use one for mTLS between your database
+  and the Teleport Database Service. Otherwise, you can use the Teleport
+  database CA.
 
 ## Step 1/5. Create a Teleport token and user
 
@@ -37,11 +45,11 @@ description: How to configure Teleport database access with self-hosted PostgreS
 
 (!docs/pages/includes/database-access/tctl-auth-sign.mdx!)
 
-Create the secrets:
+If you plan to use the Teleport database CA, run the following command to export
+Teleport's certificate authority and a generate certificate/key pair (the `ttl`
+flag sets the validity of the certificate to one year):
 
 ```code
-# Export Teleport's certificate authority and a generate certificate/key pair
-# for host db.example.com with a 1-year validity period.
 $ tctl auth sign --format=db --host=db.example.com --out=server --ttl=2190h
 ```
 
@@ -50,8 +58,16 @@ Service can reach the PostgreSQL server.
 
 (!docs/pages/includes/database-access/ttl-note.mdx!)
 
-The command will create 3 files: `server.cas`, `server.crt` and `server.key`
-which you'll need to enable mutual TLS on your PostgreSQL server.
+The command will create 3 files: 
+
+|File|Description|
+|---|---|
+|`server.cas`| x.509 CA certificate for verifying the Teleport Database Service certificate |
+|`server.crt`| x.509 certificate that the database can use to authenticate to the Teleport Database Service. Must have the address of the database as a subject.|
+|`server.key`| Private key for the database. |
+
+If you are using your own certificate authority, use it to create these three
+files with the file names given above.
 
 ## Step 3/5. Configure your PostgreSQL server
 
