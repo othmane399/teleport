@@ -39,4 +39,12 @@ export const SAML_APPLICATIONS: ResourceSpec[] = [
     icon: 'Grafana',
     event: DiscoverEventResource.SamlApplication,
   },
+  {
+    name: 'GCP Workforce Identity Pool',
+    kind: ResourceKind.SamlApplication,
+    samlMeta: { preset: SamlServiceProviderPreset.GcpWorkforce },
+    keywords: 'saml sso application idp gcp workforce identity federation',
+    icon: 'Gcp',
+    event: DiscoverEventResource.SamlApplication,
+  },
 ];
