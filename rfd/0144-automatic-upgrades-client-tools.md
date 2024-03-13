@@ -55,11 +55,47 @@ Two main use cases will be supported.
 
 #### Server Side changes
 
+TODO(russjones): Should this endpoint be unauthenticated? Should it just
+be served off the point endpoint or should we put it elsewhere?
+
+```yaml
+kind: version_directive (or version-controller or version-control-config)
+version: v3
+metadata:
+  name: version-directive
+spec:
+  # server_version is a semver formatted strings that represents the version
+  # of Teleport all agents should be running.
+  server_version: x.y.z
+
+  # client_version is a semver formatted strings that represents the version
+  # of Teleport all agents should be running.
+  client_version: a.b.c
+
+  # TODO(russjones): upgrade window?
+```
+
+This resource will be replicated to the proxy cache.
+
+TODO(russjones): This resource will be updated from the Cloud CRD to here how?
+
+The `client_version` field will be replicated to the unauthenticated endpoint
+`/v1/webapi/ping`. As the snippet below shows, this endpoint already has the
+exact server version available, so this does not increase the risk anymore than
+already.
+
+The `server_version` is undecided and will be decided in RFD #?
+
 the ping endpoint will be updated to serve a client version.
 
 the ping end point will be updatable via the following resource.
 
+TODO(russjones): Create a new resource. Do we have an exisiting one?
+
 #### client side changes
+
+TODO(russjones): Understand where is the earliest in the login process that we
+can perform this, maybe even authenticated?
 
 Users will be able to do the initial install of client tools using whatever
 mechanism they prefer (compile, tarball or packages or a package manager).
