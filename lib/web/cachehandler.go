@@ -21,6 +21,7 @@ package web
 import (
 	"net/http"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/gravitational/teleport/lib/httplib"
@@ -28,18 +29,16 @@ import (
 
 // makeCacheHandler adds support for gzip compression for given handler.
 func makeCacheHandler(handler http.Handler, etag string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// for javascript assets, we want to set an entity tag based on the version
-		// of teleport. This will allow us to cache our "app.js", and validate if the file
-		// should be recached based on the teleport version. A webasset will not change within
-		// the same version so we can use this etag to return a 304 (Not Modified). This results in
-		// only a couple hundred bytes response compared to the entire bundle js file
+	cachedFileTypes := []string{".woff", ".woff2", ".ttf"}
 
-		// The rest of our assets like fonts can be cached between versions without issue
-		if filepath.Ext(r.URL.Path) == ".js" {
-			httplib.SetEntityTagCacheHeaders(w.Header(), etag)
-		} else {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// We can cache fonts "permanently" because we don't expect them to change. The rest of our
+		// assets will have an ETag associated with them (teleport version) that will allow us
+		// to conditionally send the updated assets or a 304 status (Not Modified) response
+		if slices.Contains(cachedFileTypes, filepath.Ext(r.URL.Path)) {
 			httplib.SetCacheHeaders(w.Header(), time.Hour*24*365 /* one year */)
+		} else {
+			httplib.SetEntityTagCacheHeaders(w.Header(), etag)
 		}
 
 		handler.ServeHTTP(w, r)
