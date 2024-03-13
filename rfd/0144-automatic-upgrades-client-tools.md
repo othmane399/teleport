@@ -42,14 +42,75 @@ Automatic upgrades for client tools solves the following problems for users of
 
 ### Use cases
 
-Two main use cases will be supported.
+Two main use cases will be supported. Customers that want enroll in automatic
+updates for client tools and those that want to manually manage updates.
+
+#### Automatic Updates
+
+The first time a user performs a `tsh login` with a version of `tsh` that
+supports automatic updates, the user will be prompted to enroll into automatic
+updates.
+
+
+```
+$ tsh --proxy=proxy.example.com login
+Enroll client tools like tsh and tctl into automatic updates? [YES/no]
+TODO(russjons): Sell automatic updates here.
+
+[...]
+```
+
+If the user opts to enroll into automatic updates, on all future logins if the
+client tools binary in the users path is not the version recommended by the
+server, client tools will automaticall download and install the cirrect
+version.
+
+```
+$ tsh login --proxy=proxy.example.com
+Updating client tools to vX.Y.Z.
+Update progress: [▒▒▒▒▒▒     ] (Ctrl-C to Cancel)
+
+[...]
+```
+
+The user will be able to cancel client tools update. This may be needed for example
+if they are not a LTE connection or public WiFi.
+
+```
+$ tsh login --proxy=proxy.example.com
+Updating client tools to vX.Y.Z.
+Update progress: [▒▒▒▒▒▒     ] (Ctrl-C to Cancel)
+WARNING: Client tools update failed: some functionality may not work.
+
+[...]
+```
+
+
+
+
+```
+$ tsh login --proxy=proxy.example.com
+
+[...]
+
+Your version of tsh is out of date.
+Automatically update the version of tsh? [YES/no]
+
+[continue login process]
+```
 
 * Users that want to install Teleport and not have to think about the version
   they are running. It's estimated 
+
+
+
 * Users that want to pin client tools to a speicific version. This may be
   because client tools are being used in CI/CD infrastuctuer or device
   managment (like Jamf) tightly controls what version of software can be
   installed on a device.
+
+
+
 
 ### Implementation
 
@@ -57,6 +118,8 @@ Two main use cases will be supported.
 
 TODO(russjones): Should this endpoint be unauthenticated? Should it just
 be served off the point endpoint or should we put it elsewhere?
+
+TODO(russjones): (Teradata) Track state of upgrades within schedule resource?
 
 ```yaml
 kind: version_directive (or version-controller or version-control-config)
@@ -112,17 +175,6 @@ TODO(russjones): full toolchain.
 TODO(russjones): Metrics.
 
 ### User experience
-
-```
-$ tsh login --proxy=proxy.example.com
-
-[...]
-
-Your version of tsh is out of date.
-Automatically update the version of tsh? [YES/no]
-
-[continue login process]
-```
 
 If the user does not opt ito automatic updates:
 
