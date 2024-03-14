@@ -898,15 +898,20 @@ DEBU [TSH]       Self re-exec command: tsh [status --format=json]. tsh/aliases.g
 ...
 ```
 
-## Interactive Recording
+## Play recorded sessions
 
-Within the Teleport cluster, server and Kubernetes recorded sessions are available for listing and replay for authorized users via `tsh`.
-The same listings, including Windows desktop sessions, are available in the Web Console under Session Recordings in the Activity section.
+{/* TODO: mention other session types here*/}
 
-### List and Play Recordings
+Record server and Kubernetes sessions are available for listing and replay for
+authorized users via `tsh`.  The same listings, including Windows desktop
+sessions, are available in the Web Console under Session Recordings in the
+Activity section.
 
-Get the list of recorded sessions. By default, recordings for the past 24 hours are shown.
-The time range can be customized with the `--last`, `--from-utc`, and `--to-utc` flags.
+### List recordings
+
+Get the list of recorded sessions. By default, recordings for the past 24 hours
+are shown.  The time range can be customized with the `--last`, `--from-utc`,
+and `--to-utc` flags.
 
 ```code
 $ tsh recordings ls
@@ -916,6 +921,11 @@ b0a04442-70dc-4be8-9308-7b7901d2d600 ssh  jeff         dev       Nov 26 16:36:16
 c0a02222-70dc-4be8-9308-7b7901d2d600 kube alice                  Nov 26 20:36:16 UTC
 d0a04442-70dc-4be8-9308-7b7901d2d600 ssh  navin        test      Nov 26 16:36:16 UTC
 ```
+
+### Play sessions
+
+{/* TODO: Talk about differen resource types*/}
+{/* TODo: Talk about playing files*/}
 
 To play sessions, use the `tsh play <sessionid>` command. The screen will reset playing the interactive session with the timestamp in the upper right.
 
